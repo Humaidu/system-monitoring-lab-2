@@ -1,17 +1,17 @@
 import os
 import time
 import psutil
-from mailjet_rest import Client
+import resend
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Access the API key
-api_key = os.getenv("API_KEY")
+resend.api_key = os.getenv("API_KEY")
 
-# Access the API secret 
-api_secret = os.getenv("API_SECRET")
+if not resend.api_key:
+    raise Exception("Missing RESEND_API_KEY in .env file")
 
 # Define system time
 current_time = time.localtime()
@@ -24,45 +24,22 @@ DISK_THRESHOLD = 50
 
 # function to send email alert
 def send_alert(subject, message):
-    # instantiate mailjet client
-    mailjet = Client(auth=(api_key, api_secret), version='v3.1')
-    data = {
-        'Messages': [
-            {
-            "From": {
-                "Email": "your email address",
-                "Name": "24/7 SysMon"
-            },
-
-            "To": [
-                {
-                "Email": "recipient email address",
-                "Name": "Admin"
-                }
-             ],
-
-            "Subject": subject,
-            "HTMLPart": f"<h3>{message}</h3>"
-           }
-         ]
-    }
-    
     try:
-        result = mailjet.send.create(data=data)
-        print(f"Email sent: {result.status_code}")
+        response = resend.Emails.send({
+            "from": "onboarding@resend.dev",
+            "to": ["humaiduali@gmail.com"],
+            "subject": subject,
+            "html": f"<p>{message}</p>"
+        })
+        print("Email sent:", response["id"])
     except Exception as e:
-        print(f"Failed to send email: {str(e)}")
-
+        print("Failed to send email:", str(e))
 
 # Check system metrics
 cpu_usage = psutil.cpu_percent(interval=1)
-# print(cpu_usage)
 ram_usage = psutil.virtual_memory().percent
-# print(ram_usage)
 disk_usage = psutil.disk_usage('/').percent
-# print(disk_usage)
 
-#Create a store for email message
 # Create alert message based on threshold breaches
 alert_message = ""
 if cpu_usage > CPU_THRESHOLD:
